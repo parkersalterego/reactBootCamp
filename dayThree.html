@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Second React App</title>
+  <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+  <script src='https://unpkg.com/babel-standalone@6/babel.min.js'></script>
+</head>
+
+<body>
+  <div id='app'></div>
+
+  <script>
+    window.API = {
+      fetchFriends() {
+        return new Promise((res, rej) => {
+          const friends = [
+            {
+              name: 'John',
+              active: true
+            },
+            {
+              name: 'Bob',
+              active: true
+            },
+            {
+              name: 'Kelly',
+              active: false
+            }
+          ]
+
+          setTimeout(() => { res(friends) }, 2000)
+        })
+      }
+    }
+  </script>
+  <script type='text/babel'>
+    class Loading extends React.Component {
+      constructor(props) {
+        super(props)
+
+        this.state = {
+          text: 'Loading',
+        }
+      }
+
+      componentDidMount() {
+        const stopper = this.state.text + '...'
+
+
+        this.interval = window.setInterval(() => {
+          console.log('running')
+          this.setState((currentState) => {
+            return {
+              text: currentState.text + '.'
+            }
+          })
+        }, 300)
+      }
+
+      componentWillUnmount() {
+        window.clearInterval(this.interval);
+      }
+
+      render() {
+        return(<h1>{this.state.text}</h1>)
+      }
+    }
+
+    function ActiveFriends (props) {
+        return (
+          <div>
+            <h1>Active Friends</h1>
+            <ul>
+              {props.list.map((friend) => (
+                  <li key={friend.name}>
+                  <span>{friend.name}</span>
+                  <button onClick={() => props.onDeactivateFriend(friend.name, false)}>Deactivate</button>
+                  <button onClick={() => props.onRemoveFriend(friend.name)}>Remove</button>
+                  </li>
+              ))}
+            </ul>
+          </div>
+        )
+    }
+
+    function InactiveFriends (props) {
+        return (
+          <div>
+            <h1>Inctive Friends</h1>
+            <ul>
+              {props.list.map((friend) => (
+                  <li key={friend.name}>
+                  <span>{friend.name}</span>
+                  <button onClick={() => props.onActivateFriend(friend.name, true)}>Activate</button>
+                  </li>
+              ))}
+            </ul>
+          </div>
+        )
+    }
+
+    class App extends React.Component {
+        constructor(props) {
+          console.log('--constructor--');
+            super(props)
+
+            this.state = {
+                friends: [],
+                input: '',
+                loading: true
+            }
+
+            // autobind all own functions
+            for(const func of Object.getOwnPropertyNames(this.constructor.prototype)) {
+              if(['constructor', 'render', 'componentDidMount', 'componentDidUpdate', 'componentWillUnmount', 'shouldComponentUpdate'].indexOf(func) >= 0) {
+                continue;
+              }
+              console.log(func)
+              this[func] = this[func].bind(this);
+            }
+          }
+
+          componentDidMount() {
+            console.log('--componentDidMount--');
+
+            API.fetchFriends().then((friends) => {
+              console.log('FRIENDS', friends)
+              this.setState({
+                friends,
+                loading: false
+              })
+            })
+          }
+
+          componentDidUpdate() {
+            console.log('--componentDidUpdate--');
+          }
+
+          componentWillUnmount() {
+            console.log('--componentWillUnmount--');
+          }
+
+          shouldComponentUpdate(nextProps, nextState) {
+            return true;
+          }
+
+          static getDerivedStatesFromProps() {
+            console.log('--getDerivedStatesFromProps--');
+          }
+
+          handleAddFriends() {
+            const name = this.state.input;
+            if(this.state.friends.find((friend) => friend.name === name)) {
+              alert('Friend already exists.');
+              return;
+            }
+            
+            this.setState((currentState) => {
+              return {
+                friends: currentState.friends.concat([{
+                  name: name,
+                  active: true
+                }])
+              }
+            })
+          }
+
+          handleActivateFriends(name) {
+            this.setState((currentState) => {
+              return {
+                friends: currentState.friends.concat([currentState.notfriends.filter((friend) => friend === name)]),
+              }
+            })
+          }
+
+          handleRemoveFriend(name) {
+            // this is bad, react won't know state changed
+            //this.state.friends = this.state.friends.filter((friend) => friend !== name);
+
+            this.setState((currentState) => {
+              return {
+                friends: currentState.friends.filter((friend) => friend.name !== name),
+              }
+            })
+          }
+
+          handleToggleFriend(name, state) {
+            // this is bad, react won't know state changed
+            //this.state.friends = this.state.friends.filter((friend) => friend !== name);
+
+            this.setState((currentState) => {
+              const friend = currentState.friends.find((friend) => friend.name === name);
+
+              return {
+                friends: currentState.friends.filter((friend) => friend.name !== name)
+                .concat({
+                  name: name,
+                  active: state
+                })
+              }
+            })
+          }
+
+          handleClearAll(name) {
+            // this is bad, react won't know state changed
+            //this.state.friends = this.state.friends.filter((friend) => friend !== name);
+
+            this.setState((currentState) => {
+              return {
+                friends: [],
+                notfriends: []
+              }
+            })
+          }
+
+          updateInput(e) {
+            const value = e.target.value;
+
+            this.setState({
+              input: value
+            })
+          }
+
+          render() {
+            console.log('--render--');
+
+            if(this.state.loading === true) {
+              return (<Loading />)
+            }
+
+            return (
+              <div>
+                <div>
+                  <input
+                    type='text'
+                    placeholder='new friend'
+                    value={this.state.input}
+                    onChange={this.updateInput}
+                  />
+                  <button onClick={this.handleAddFriends}>Submit</button>
+                </div>
+                <div>
+                  <button onClick={this.handleClearAll}>Clear All</button>
+                </div>
+                <ActiveFriends 
+                  list={this.state.friends.filter((friend) => friend.active === true)} 
+                  onRemoveFriend={this.handleRemoveFriend}
+                  onDeactivateFriend={this.handleToggleFriend}
+                />
+                <InactiveFriends 
+                  list={this.state.friends.filter((friend) => friend.active === false)} 
+                  onActivateFriend ={this.handleToggleFriend}
+                />
+              </div>
+            )
+          }
+    }
+
+    ReactDOM.render(
+      <App />,
+      document.getElementById('app')
+    )
+  </script>
+</body>
+
+</html>
